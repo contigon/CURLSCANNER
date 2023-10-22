@@ -28,6 +28,8 @@ Cisco IOS XE Zero-Day Vulnerability (CVE-2023-20198): http.html_hash:1076109428 
 
 4.The .xlsx file should have the IP address in the 1st column and PORT in the 2ns colums
 
+5.Input the URL path to check (example: /webui/logoutconfirm.html?logon_hash=1)
+
 "@
 Write-Host $Help -ForegroundColor Yellow
 
@@ -52,7 +54,7 @@ function Open-File([string] $initialDirectory){
 } 
 
 Write-Host "Please choose the .xlsx file:"
-$OpenFile=Open-File "C:\Users\omer\Desktop\VDP\CISCO" #$env:USERPROFILE 
+$OpenFile=Open-File $env:USERPROFILE 
 
 if ($OpenFile -ne "") 
 {
@@ -73,6 +75,9 @@ $port = $Sheet | Select 'port'
 $TotalIPs = $ip.Count
 
 Write-Host "scanning $TotalIPs ip addresses..." -ForegroundColor Yellow
+$Exploit = Read-Host "Input path (example: /webui/logoutconfirm.html?logon_hash=1)"
+
+$Exploit = $Exploit.Trim()
 
 for($x=0;$x -lt $TotalIPs;$x++)
 {
@@ -82,14 +87,14 @@ $CiscoPORT = $port[$x].port
 try {
     
     if($CiscoPORT -ceq 80){
-        $URL = "http://$CiscoIP/webui/logoutconfirm.html?logon_hash=1"
+        $URL = "http://$CiscoIP$Exploit"
         $response = Invoke-WebRequest -Method Post -Uri $URL 
         } elseif($CiscoPORT -ceq 443 ){
-        $URL = "https://$CiscoIP/webui/logoutconfirm.html?logon_hash=1"
+        $URL = "https://$CiscoIP$Exploit"
         $response = Invoke-WebRequest -Method Post -Uri $URL
          }
           else{
-        $URL = "http://${CiscoIP}:${CiscoPORT}/webui/logoutconfirm.html?logon_hash=1"
+        $URL = "http://${CiscoIP}:${CiscoPORT}$Exploit"
         $response = Invoke-WebRequest -Method Post -Uri $URL
     }
         
