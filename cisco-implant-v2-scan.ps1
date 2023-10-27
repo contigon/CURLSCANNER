@@ -33,8 +33,9 @@ function Open-File([string] $initialDirectory){
 
 
 $RunTime = Get-Date -Format "dd-MM-yyyy"
-$logFile = "$PSScriptRoot\CiscoLogImplantv2Scan-$RunTime.txt"
+$logFile = "$PSScriptRoot\CiscoImplantV2Log-$RunTime.txt"
 Remove-Item $logFile -Force -ErrorAction SilentlyContinue
+"Number,Result,ip"|Tee-Object -FilePath $logFile -Append
 
 
 $Help = @"
@@ -89,7 +90,6 @@ try {
         "Authorization" = "0ff4fbf0ecffa77ce8d3852a29263e263838e9bb"
     }
 
-    #$response = Invoke-WebRequest -Method Post -Headers $headers -Uri "https://$line/webui/logoutconfirm.html?logon_hash=1" -TimeoutSec 3
     $response = Invoke-WebRequest "https://$line/%25" -TimeoutSec 3
 
     if ($response.StatusCode -eq 200) {
@@ -119,16 +119,16 @@ $data = Import-Csv $logFile
 $Implanted = $data | where-Object Result -EQ "Implanted"
 $Unavailable = $data | where-Object Result -EQ "503 Service Unavailable"
 $OK = $data | where-Object Result -EQ "200-OK"
-$Timeout = $data | where-Object Result -EQ "Timeout"
 $InternalServerError = $data | where-Object Result -EQ "InternalServerError"
+$TOut = $data | where-Object Result -EQ "Timeout"
 
-
+Write-Host " -----------------------------REPORT---------------------------------"
 Write-Host "Implanted:" $Implanted.Count -ForegroundColor Red
 Write-Host "200 OK =" $OK.Count -ForegroundColor Red
 Write-Host "503 Service Unavailable:" $Unavailable.Count -ForegroundColor Green
-Write-Host "Timeout:" $Timeout.Count -ForegroundColor Green
 Write-Host "Internal Server Error:" $InternalServerError.Count -ForegroundColor Green
+Write-Host "Timeout:" $TOut.Count -ForegroundColor Green
 Write-Host "TOTAL DEVICES:" $data.Count -ForegroundColor Yellow
+Write-Host " -------------------------------------------------------------------"
 
-
- explorer $logFile
+explorer $logFile

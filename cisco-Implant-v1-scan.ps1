@@ -1,6 +1,9 @@
-﻿cls
+﻿
+cls
 
+#install excel module to work with excel files
 #Install-Module -Name ImportExcel -Scope CurrentUser -Force
+
 # bypassing SSL/TLS check
 add-type @"
     using System.Net;
@@ -38,8 +41,8 @@ function Open-File([string] $initialDirectory){
 
 $Help = @"
 
-Cisco IOS XE Vulnerability
-------------------------------------------
+Cisco IOS XE Vulnerability (check for hash implant)
+----------------------------------------------------
 CVE-2023-20198 (CVSS score: 10.0) and CVE-2023-20273 (CVSS score: 7.2)
 https://github.com/fox-it/cisco-ios-xe-implant-detection
 https://blog.talosintelligence.com/active-exploitation-of-cisco-ios-xe-software/
@@ -50,6 +53,10 @@ https://blog.talosintelligence.com/active-exploitation-of-cisco-ios-xe-software/
 
 curl -k -H "Authorization: 0ff4fbf0ecffa77ce8d3852a29263e263838e9bb" -X POST "https://DEVICEIP/webui/logoutconfirm.html?logon_hash=1"
 
+Note:
+In order to download the file please run this command from powershell 
+Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/cisco-Implant-vs-scan.ps1
+
 "@
 
 Write-Host $Help -ForegroundColor Yellow
@@ -58,7 +65,7 @@ if ($input -eq "q") {
     break
 }
 
-Write-Host "Please choose the .csv file:"
+Write-Host "Please choose the <ip>.txt file:"
 $OpenFile=Open-File $env:USERPROFILE 
 
 if ($OpenFile -ne "") 
@@ -85,51 +92,53 @@ try {
     }
 
     $response = Invoke-WebRequest -Method Post -Headers $headers -Uri "https://$line/webui/logoutconfirm.html?logon_hash=1" -TimeoutSec 3
-    #$NotFound = Invoke-WebRequest "https://$line/%25" -TimeoutSec 3
+
     $IMPLANT = ($response.Content).Trim()
     $IsHex = $response.Content.Length
         
     if ($isHex -eq 19) {
-        "$x,Implanted,$line,$IMPLANT" | Tee-Object -FilePath $logFile -Append
+        "$x,Implanted,$line" | Tee-Object -FilePath $logFile -Append
     } else {
-        "$x,Not Implanted,$line," | Tee-Object -FilePath $logFile -Append
+        "$x,Not Implanted,$line" | Tee-Object -FilePath $logFile -Append
     }
 } catch {
     $TimeoutStatus = $_.Exception.status
     if($TimeoutStatus -eq "Timeout"){
-        "$x,Timeout,$line," |Tee-Object -FilePath $logFile -Append
+        "$x,Timeout,$line" |Tee-Object -FilePath $logFile -Append
     } else {
 
     $StatusCode = $_.Exception.Response.StatusCode
     
     if ($StatusCode -eq [System.Net.HttpStatusCode]::NotFound) {
-        "$x,User was not found,$line," |Tee-Object -FilePath $logFile -Append
+        "$x,User was not found,$line" |Tee-Object -FilePath $logFile -Append
     } elseif ($StatusCode -eq [System.Net.HttpStatusCode]::InternalServerError) {
         "$x,InternalServerError,$line" |Tee-Object -FilePath $logFile  -Append
     } elseif ($StatusCode -eq [System.Net.HttpStatusCode]::InternalServerError) {
-        "$x,InternalServerError,$line," |Tee-Object -FilePath $logFile -Append
+        "$x,InternalServerError,$line" |Tee-Object -FilePath $logFile -Append
     }
     else {
-        "$x,503 Service Unavailable,$line,"|Tee-Object -FilePath $logFile -Append
+        "$x,503 Service Unavailable,$line"|Tee-Object -FilePath $logFile -Append
     }
   }
   }
  } 
  
+
 $data = Import-Csv $logFile
 
 $Implanted = $data | where-Object Result -EQ "Implanted"
 $Unavailable = $data | where-Object Result -EQ "503 Service Unavailable"
 $OK = $data | where-Object Result -EQ "200-OK"
-$Timeout = $data | where-Object Result -EQ "Timeout"
 $InternalServerError = $data | where-Object Result -EQ "InternalServerError"
+$TOut = $data | where-Object Result -EQ "Timeout"
 
-
+Write-Host " -----------------------------REPORT---------------------------------"
 Write-Host "Implanted:" $Implanted.Count -ForegroundColor Red
 Write-Host "200 OK =" $OK.Count -ForegroundColor Red
 Write-Host "503 Service Unavailable:" $Unavailable.Count -ForegroundColor Green
-Write-Host "Timeout:" $Timeout.Count -ForegroundColor Green
 Write-Host "Internal Server Error:" $InternalServerError.Count -ForegroundColor Green
+Write-Host "Timeout:" $TOut.Count -ForegroundColor Green
 Write-Host "TOTAL DEVICES:" $data.Count -ForegroundColor Yellow
+Write-Host " -------------------------------------------------------------------"
 
 explorer $logFile
