@@ -1,5 +1,5 @@
 ﻿cls
-Read-Host $PSScriptRoot
+Read-Host "XXXX"
 
 
 #Install-Module -Name ImportExcel -Scope CurrentUser -Force
