@@ -54,7 +54,7 @@ curl -k "https://DEVICEIP/%25"
 
 Note:
 In order to download the file please run this command from powershell 
-Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/cisco-Implant-v1-scan.ps1
+Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/cisco-Implant-v2-scan.ps1
 
 "@
 

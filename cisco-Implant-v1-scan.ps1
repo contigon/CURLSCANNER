@@ -55,7 +55,7 @@ curl -k -H "Authorization: 0ff4fbf0ecffa77ce8d3852a29263e263838e9bb" -X POST "ht
 
 Note:
 In order to download the file please run this command from powershell 
-Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/cisco-Implant-vs-scan.ps1
+Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/cisco-Implant-v1-scan.ps1
 
 "@
 
