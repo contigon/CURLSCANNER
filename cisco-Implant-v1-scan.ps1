@@ -1,5 +1,7 @@
 ﻿cls
 
+$PSScriptRoot
+
 #Install-Module -Name ImportExcel -Scope CurrentUser -Force
 # bypassing SSL/TLS check
 add-type @"
@@ -38,7 +40,7 @@ function Open-File([string] $initialDirectory){
 
 $Help = @"
 
- Cisco IOS XE Vulnerability
+Cisco IOS XE Vulnerability
 ------------------------------------------
 CVE-2023-20198 (CVSS score: 10.0) and CVE-2023-20273 (CVSS score: 7.2)
 https://github.com/fox-it/cisco-ios-xe-implant-detection
