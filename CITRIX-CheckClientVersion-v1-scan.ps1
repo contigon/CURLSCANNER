@@ -33,28 +33,30 @@ function Open-File([string] $initialDirectory){
 
 
 $RunTime = Get-Date -Format "dd-MM-yyyy"
-$logFile = "$PSScriptRoot\CiscoImplantV2Log-$RunTime.txt"
+$logFile = "$PSScriptRoot\ResultLog-$RunTime.txt"
 Remove-Item $logFile -Force -ErrorAction SilentlyContinue
-"Number,Result,ip"|Tee-Object -FilePath $logFile -Append
+"Number,Result,client version,ip"|Tee-Object -FilePath $logFile -Append
 
 
 $Help = @"
 
- Cisco IOS XE Vulnerability (Silent Check %25)
-----------------------------------------------
-CVE-2023-20198 (CVSS score: 10.0) and CVE-2023-20273 (CVSS score: 7.2)
-https://github.com/fox-it/cisco-ios-xe-implant-detection
-https://blog.talosintelligence.com/active-exploitation-of-cisco-ios-xe-software/
+CVE-2023-4966: Exploitation of Citrix NetScaler Information Disclosure Vulnerability
+-------------------------------------------------------------------------------------
+https://www.rapid7.com/blog/post/2023/10/25/etr-cve-2023-4966-exploitation-of-citrix-netscaler-information-disclosure-vulnerability/
 
-1.Please prepare the CISCO devices ip list file (each ip in a different line)
-2.The script will check if the device has been compromized and is implanted
+
+1.Please prepare the  devices [ip:port] list file (each ip in a different line)
+2.The script will check if the device has been compromized 
 3.The result will be provided in the file [$logFile]
 
-curl -k "https://DEVICEIP/%25"
+curl -k https://<IP>/vpn/pluginlist.xml | grep version
+
+PATCHED Version:
+version="23.8.1.5" path="/epa/scripts/win/nsepa_setup.exe"
 
 Note:
 In order to download the file please run this command from powershell 
-Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/cisco-Implant-v2-scan.ps1
+Start-BitsTransfer -Source https://raw.githubusercontent.com/contigon/Tools/master/CITRIX-CheckClientVersion-v1-scan.ps1
 
 "@
 
@@ -86,29 +88,39 @@ $x = ++$X
  
 try {
     
-    $headers = @{
-        "Authorization" = "0ff4fbf0ecffa77ce8d3852a29263e263838e9bb"
-    }
-
-    $response = Invoke-WebRequest "https://$line/%25" -TimeoutSec 3
+    $response = Invoke-WebRequest "https://$line/vpn/pluginlist.xml" -TimeoutSec 3
 
     if ($response.StatusCode -eq 200) {
-        "$x,200-OK,$line" | Tee-Object -FilePath $logFile -Append  
+        
+        $xml = [xml]$response.content
+        $version = $xml.SelectSingleNode('//repositories/repository/plugin').version
+
+        
+        if($version -eq "23.8.1.5"){
+           
+            "$x,TRUE,$version,$line" | Tee-Object -FilePath $logFile -Append
+
+
+        } else {
+            
+             "$x,FALSE,$version,$line" | Tee-Object -FilePath $logFile -Append
+
+        }
     } 
 } catch {
     $TimeoutStatus = $_.Exception.status
     if($TimeoutStatus -eq "Timeout"){
-        "$x,Timeout,$line" |Tee-Object -FilePath $logFile -Append
+        "$x,Timeout,,$line" |Tee-Object -FilePath $logFile -Append
     } else {
 
     $StatusCode = $_.Exception.Response.StatusCode 
     if ($StatusCode -eq [System.Net.HttpStatusCode]::NotFound) {
-        "$x,Implanted,$line" |Tee-Object -FilePath $logFile -Append
+        "$x,Not-Found,,$line" |Tee-Object -FilePath $logFile -Append
     } elseif ($StatusCode -eq [System.Net.HttpStatusCode]::InternalServerError) {
-        "$x,InternalServerError,$line" |Tee-Object -FilePath $logFile  -Append
+        "$x,InternalServerError,,$line" |Tee-Object -FilePath $logFile  -Append
     } 
     else {
-        "$x,503 Service Unavailable,$line"|Tee-Object -FilePath $logFile -Append
+        "$x,503-Service-Unavailable,,$line"|Tee-Object -FilePath $logFile -Append
     }
   }
   }
@@ -116,16 +128,20 @@ try {
 
 $data = Import-Csv $logFile
 
-$Implanted = $data | where-Object Result -EQ "Implanted"
-$Unavailable = $data | where-Object Result -EQ "503 Service Unavailable"
+$ClientVersionOK = $data | where-Object Result -EQ "TRUE"
+$ClientVersionDifferent = $data | where-Object Result -EQ "FALSE"
+$Unavailable = $data | where-Object Result -EQ "503-Service-Unavailable"
 $OK = $data | where-Object Result -EQ "200-OK"
 $InternalServerError = $data | where-Object Result -EQ "InternalServerError"
 $TOut = $data | where-Object Result -EQ "Timeout"
+$NotFound = $data | where-Object Result -EQ "Not-Found"
 
-Write-Host " --------------------REPORT CISCO IMPLANT V2------------------------"
-Write-Host "Implanted:" $Implanted.Count -ForegroundColor Red
+Write-Host " ---------------CITRIX CLIENT VERSION 23.8.1.5---------------"
+Write-Host "CLIENT VERSION OK:" $ClientVersionOK.Count -ForegroundColor Green
+Write-Host "CLIENT VERSION Different:" $ClientVersionDifferent.Count -ForegroundColor Red
 Write-Host "200 OK =" $OK.Count -ForegroundColor Red
 Write-Host "503 Service Unavailable:" $Unavailable.Count -ForegroundColor Green
+Write-Host "Not Found:" $NotFound.Count -ForegroundColor Green
 Write-Host "Internal Server Error:" $InternalServerError.Count -ForegroundColor Green
 Write-Host "Timeout:" $TOut.Count -ForegroundColor Green
 Write-Host "TOTAL DEVICES:" $data.Count -ForegroundColor Yellow
