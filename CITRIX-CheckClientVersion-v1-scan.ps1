@@ -49,10 +49,14 @@ https://www.rapid7.com/blog/post/2023/10/25/etr-cve-2023-4966-exploitation-of-ci
 2.The script will check if the device has been compromized 
 3.The result will be provided in the file [$logFile]
 
-curl -k https://<IP>/vpn/pluginlist.xml | grep version
+curl -k https://<IP:port>/vpn/pluginlist.xml | grep version
 
 PATCHED Version:
 version="23.8.1.5" path="/epa/scripts/win/nsepa_setup.exe"
+
+example of ip.txt file:
+192.116.233.94:443
+12.116.133.45:4443
 
 Note:
 In order to download the file please run this command from powershell 
@@ -66,7 +70,7 @@ if ($input -eq "q") {
     break
 }
 
-Write-Host "Please choose the <ip>.txt file:"
+Write-Host "Please choose the <ip:port>.txt file:"
 $OpenFile=Open-File $env:USERPROFILE 
 
 if ($OpenFile -ne "") 
